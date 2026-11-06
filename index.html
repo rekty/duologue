@@ -390,6 +390,49 @@
       </footer>
     </main>
 
-    <script type="module" src="app.js"></script>
+    <script type="module">
+      // GitHub Pages serves every module with max-age=600, so a deploy can stay invisible for ten
+      // minutes. Read the modules network-first, then import them through a blob whose import
+      // specifiers carry a hash of the code: the browser has nothing to reuse, so a reload is
+      // always the code that is on the server right now.
+      const modules = ["./app.js", "./shared/talk.js", "./shared/pollen.js"];
+
+      async function read(path) {
+        const response = await fetch(path, { cache: "no-store" });
+        if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+        const text = await response.text();
+        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+        const hash = [...new Uint8Array(digest)]
+          .slice(0, 4)
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join("");
+        return { text, hash, url: new URL(path, location.href) };
+      }
+
+      try {
+        const [app, ...shared] = await Promise.all(modules.map(read));
+        const versioned = new Map(
+          shared.map((module) => [
+            module.url.pathname,
+            `${module.url.origin}${module.url.pathname}?v=${module.hash}`,
+          ]),
+        );
+        const source = app.text.replace(
+          /(from\s+["'])(\.\/shared\/[^"']+)(["'])/g,
+          (whole, before, specifier, after) => {
+            const absolute = new URL(specifier, app.url);
+            const url = versioned.get(absolute.pathname) || `${absolute.origin}${absolute.pathname}?v=${app.hash}`;
+            return `${before}${url}${after}`;
+          },
+        );
+        window.__duologueVersion = app.hash;
+        console.info(`Duologue ${app.hash}`);
+        await import(URL.createObjectURL(new Blob([source], { type: "text/javascript" })));
+      } catch (error) {
+        // A failed hash must never leave a blank page behind.
+        console.warn("versioned load failed, falling back to the plain module", error);
+        await import("./app.js");
+      }
+    </script>
   </body>
 </html>

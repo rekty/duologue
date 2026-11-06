@@ -137,6 +137,11 @@ python -m http.server 8100      # open http://localhost:8100 (and /#demo)
 
 No build step and no dependencies: the directory you clone is the page you deploy.
 
+`index.html` reads the three modules network-first and imports them through a blob whose import
+specifiers carry a short hash of each file (`?v=…`), because GitHub Pages serves them with
+`max-age=600` and a deploy would otherwise stay invisible for ten minutes. Open the console and it
+prints the hash it loaded; if hashing ever fails the page falls back to the plain module.
+
 ## Credits
 
 The scene is borrowed from the r/ChatGPT video of two AI agents in a job interview, neither of which
