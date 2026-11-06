@@ -354,6 +354,13 @@ async function loadModels() {
     const body = await response.json();
     const list = Array.isArray(body) ? body : (body?.data ?? body?.models ?? []);
     const ids = list
+      // A reasoning model spends the whole line budget thinking and answers nothing,
+      // so the picker only offers models that can keep to a forty-word turn.
+      .filter(
+        (entry) =>
+          typeof entry === "string" ||
+          (entry?.reasoning !== true && (entry?.category ?? "text") === "text"),
+      )
       .map((entry) => (typeof entry === "string" ? entry : entry?.id || entry?.name))
       .filter((id) => typeof id === "string" && id.includes("/"))
       .slice(0, 24);
