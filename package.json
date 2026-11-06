@@ -1,0 +1,6 @@
+{
+  "name": "duologue",
+  "private": true,
+  "type": "module",
+  "description": "Two AI agents talk to each other until one hangs up. Static page, no build step."
+}

@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Duologue — two agents talk until one hangs up</title>
+    <meta
+      name="description"
+      content="Put two Pollinations agents on a call and watch them talk. Each one can end it, and neither knows how. Readers pay with their own Pollen."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101116'/%3E%3Cpath d='M20 24a8 8 0 0111-7l3 2 3-2a8 8 0 0111 7l-1 12a8 8 0 01-13 6l-1-1-1 1a8 8 0 01-13-6z' fill='%236f5dff'/%3E%3Ccircle cx='32' cy='46' r='5' fill='%2327d4cd'/%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f3f3f7;
+        --muted: #a2a2b0;
+        --line: rgba(255, 255, 255, 0.13);
+        --card: #1a1b21;
+        --violet: #6f5dff;
+        --cyan: #27d4cd;
+        --bad: #ff8f80;
+        --ok: #74ff9e;
+        --a: #6f5dff;
+        --b: #27d4cd;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 34px 20px 70px;
+        background:
+          radial-gradient(820px 380px at 90% -10%, rgba(39, 212, 205, 0.16), transparent 70%),
+          radial-gradient(720px 360px at 2% 0%, rgba(111, 93, 255, 0.18), transparent 70%),
+          #101014;
+        color: var(--ink);
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 1060px;
+        margin: 0 auto;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 22px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: clamp(27px, 3.4vw, 38px);
+        letter-spacing: -0.02em;
+      }
+      .lede {
+        margin: 0;
+        max-width: 60ch;
+        color: #d5d5de;
+      }
+      .auth {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 236px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        font-size: 13px;
+      }
+      .auth .code {
+        font: 600 17px/1.2 ui-monospace, Menlo, monospace;
+        letter-spacing: 0.16em;
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 900px) {
+        .grid {
+          grid-template-columns: 320px 1fr;
+        }
+      }
+      section.panel {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+      }
+      section.panel h2 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+      .hint {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      label.field {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      label.field span {
+        display: block;
+        margin-bottom: 4px;
+      }
+      select,
+      input[type="range"] {
+        width: 100%;
+      }
+      select {
+        padding: 8px 10px;
+        border-radius: 9px;
+        border: 1px solid var(--line);
+        background: #24242b;
+        color: var(--ink);
+        font: inherit;
+        font-size: 14px;
+      }
+      input[type="range"] {
+        accent-color: var(--cyan);
+      }
+      .seat {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #131319;
+        margin-bottom: 10px;
+      }
+      .seat b {
+        display: block;
+        font-size: 14px;
+      }
+      .seat small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .seat.a {
+        border-left: 3px solid var(--a);
+      }
+      .seat.b {
+        border-left: 3px solid var(--b);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      button.act {
+        padding: 9px 15px;
+        border-radius: 9px;
+        border: 1px solid var(--line);
+        background: #24242b;
+        color: var(--ink);
+        font: inherit;
+        cursor: pointer;
+      }
+      button.act.primary {
+        border: 0;
+        font-weight: 600;
+        color: #0d0d16;
+        background: linear-gradient(95deg, var(--violet), var(--cyan));
+        flex: 1 1 auto;
+      }
+      button.act.warn {
+        border-color: rgba(255, 143, 128, 0.5);
+        color: var(--bad);
+      }
+      button.act:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .link {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--cyan);
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .status {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        min-height: 20px;
+      }
+      .status.bad {
+        color: var(--bad);
+      }
+      .banner {
+        margin: 0 0 14px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #131319;
+        font-size: 14px;
+      }
+      .banner strong {
+        color: var(--cyan);
+      }
+      .banner:empty {
+        display: none;
+      }
+      ol.calls {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 220px;
+        max-height: 520px;
+        overflow: auto;
+      }
+      ol.calls li {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #131319;
+        border-left: 3px solid var(--line);
+      }
+      ol.calls li.a {
+        border-left-color: var(--a);
+      }
+      ol.calls li.b {
+        border-left-color: var(--b);
+      }
+      ol.calls .meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      ol.calls .meta b {
+        font-size: 13px;
+        color: var(--ink);
+      }
+      ol.calls .meta .model {
+        font: 500 11px/1.4 ui-monospace, Menlo, monospace;
+        padding: 1px 6px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.07);
+      }
+      ol.calls p {
+        margin: 4px 0 0;
+        font-size: 15px;
+      }
+      .hangup {
+        display: inline-block;
+        margin-top: 6px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: rgba(255, 143, 128, 0.16);
+        color: var(--bad);
+        font: 600 11px/1.8 ui-monospace, Menlo, monospace;
+        letter-spacing: 0.08em;
+      }
+      .thinking {
+        color: var(--muted);
+        font-size: 13px;
+        padding: 10px 2px;
+      }
+      footer {
+        margin-top: 34px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      footer img {
+        display: block;
+        width: 172px;
+        margin-bottom: 10px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Duologue</h1>
+          <p class="lede">
+            Two agents, one call, no exit. Pick a scene and a model for each side, then watch them
+            talk — each turn is one request on your own Pollen, and either agent can end the call
+            with a hang-up token. Neither one is good at it.
+          </p>
+        </div>
+        <div class="auth">
+          <strong id="auth-title">Not connected</strong>
+          <span id="auth-note" class="hint" style="margin: 0">
+            A call needs Pollen: one request per turn.
+          </span>
+          <div id="auth-device" hidden>
+            <div class="code" id="auth-code"></div>
+            <button class="link" id="auth-open">Open the approval page</button>
+          </div>
+          <div class="row" style="margin-top: 0">
+            <button class="act" id="auth-connect">Connect Pollen</button>
+            <button class="act" id="auth-out" hidden>Disconnect</button>
+          </div>
+          <details>
+            <summary style="cursor: pointer">Already have an sk_ key?</summary>
+            <textarea
+              id="auth-key"
+              placeholder="sk_…"
+              style="min-height: 40px; margin-top: 8px; width: 100%; background: #131319; color: inherit; border: 1px solid rgba(255,255,255,0.13); border-radius: 8px; padding: 8px"
+            ></textarea>
+            <button class="link" id="auth-use">Use this key</button>
+          </details>
+        </div>
+      </header>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>The call</h2>
+          <p class="hint">Both sides are Pollinations models. Swapping one is how you find out who talks.</p>
+
+          <label class="field">
+            <span>Scene</span>
+            <select id="scenario"></select>
+          </label>
+
+          <div class="seat a">
+            <b id="seat-a-name">Interviewer</b>
+            <small id="seat-a-hint">opens the call</small>
+            <label class="field" style="margin: 8px 0 0">
+              <span>Model</span>
+              <select id="model-a"></select>
+            </label>
+          </div>
+
+          <div class="seat b">
+            <b id="seat-b-name">Candidate</b>
+            <small id="seat-b-hint">answers</small>
+            <label class="field" style="margin: 8px 0 0">
+              <span>Model</span>
+              <select id="model-b"></select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Turns before you cut the line: <b id="turns-out">8</b></span>
+            <input type="range" id="turns" min="4" max="20" value="8" step="1" />
+          </label>
+
+          <div class="row">
+            <button class="act primary" id="start">Start the call</button>
+            <button class="act warn" id="stop" hidden>Hang up on both</button>
+          </div>
+          <p class="status" id="status"></p>
+        </section>
+
+        <section class="panel">
+          <h2>Transcript</h2>
+          <p class="hint" id="sub">Nothing said yet.</p>
+          <div class="banner" id="banner"></div>
+          <ol class="calls" id="calls"></ol>
+        </section>
+      </div>
+
+      <footer>
+        <a href="https://pollinations.ai/?ref=badge">
+          <img
+            src="https://raw.githubusercontent.com/pollinations/pollinations/main/packages/ui/src/brand/badge-made-with.svg"
+            alt="Made with pollinations.ai"
+          />
+        </a>
+        <p>
+          Each line is one chat completion, sent to Pollinations on a key the app received from you
+          through the device flow; the key lives in <code>sessionStorage</code> and dies with the
+          tab. Nothing is stored, no transcript is uploaded anywhere else, and the hang-up decision
+          is read from the model's own reply.
+        </p>
+      </footer>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
