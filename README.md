@@ -6,6 +6,9 @@ Two agents, one call, no exit. Live app: **https://rekty.github.io/duologue/**
 
 ![Duologue](assets/screenshot.png)
 
+That capture is a real call: Ada (`openai/gpt-6.1-terra`) and Bram (`openai/gpt-5.4-nano`) on *Two
+philosophers, one topic*, with Bram hanging up at turn 5.
+
 Pick a scene, give each side its own model, and watch them talk. Every turn is one chat completion
 on the reader's own Pollen. Either agent can end the call by emitting a hang-up token — and, as in
 the video that inspired the quest, neither one is any good at it.
@@ -68,12 +71,37 @@ visible. Nothing is spent.
 5. Press **Hang up on both** mid-call on a second run: the transcript stops, the verdict says you
    hung up, and no further requests are made.
 
+## Verified calls
+
+Two runs on the live page, on the author's own Pollen, with the transcript and the browser network
+log checked against each other:
+
+| Scene | Seats | Result | Requests |
+|---|---|---|---|
+| Negotiating with a thermostat, cap 4 | `openai/gpt-6.1-terra` vs `openai/gpt-5.4-nano` | Resident hung up at turn 2 | 2 × `POST /v1/chat/completions` → 200 |
+| Two philosophers, one topic, cap 6 | `openai/gpt-6.1-terra` vs `openai/gpt-5.4-nano` | Bram hung up at turn 5 | 5 × `POST /v1/chat/completions` → 200 |
+
+The philosophers call ended on its own, five turns in, before the cap could cut it:
+
+> **Ada (turn 4):** So a practice can become a rule without becoming justified: praise and
+> punishment show what a group values, not whether it should. How can we distinguish genuine
+> reasons from defenses of our identity?
+>
+> **Bram (turn 5, `[HANG UP]`):** Look for whether the reasons survive audience changes: if the
+> same "ought" is offered as if it constrained a stranger too, it's more than identity defense; but
+> if it appears only when our status is threatened, it's self-protection in rule-clothing.
+
+Cutting a call short was checked the same way: pressing **Hang up on both** mid-turn ends the request
+in flight with `net::ERR_ABORTED`, freezes the transcript at the lines already spoken, and sends
+nothing further.
+
 ## Cost
 
 One request per turn, `max_tokens` 180 per line, and the context window is capped at the last ten
 messages, so the price of a turn does not grow as the call goes on. A full eight-turn call is eight
 chat completions; with the default `openai/gpt-5.4-nano` that is a fraction of a Pollen. The opening
-line is canned and costs nothing. The model picker is filled from `gen.pollinations.ai/models` and
+line is canned and costs nothing. A turn the provider rejects for exhausting its output budget is
+retried once at 700 tokens. The model picker is filled from `gen.pollinations.ai/models` and
 falls back to the default when the list is unreachable.
 
 ## Privacy
@@ -87,6 +115,11 @@ whenever you like.
 
 - **Hang-up detection is a heuristic.** The token is unambiguous, but a model may simply never emit
   it, which is why the cap and the manual hang-up exist. That failure is the joke, not a bug.
+- **Reasoning models cannot keep to one line.** `/models` flags them with `"reasoning": true`, and
+  on a forty-word budget they spend every token thinking and then return
+  `400 "The model exhausted its output token limit before producing an answer"`, which used to kill
+  the call mid-scene. A turn now retries once with 700 tokens, and the picker hides `reasoning: true`
+  models (190 of the 424 listed) because for `meta/muse-spark-1.3` even 700 was not enough.
 - **Agents drift.** Two models with the same role text will still find different things to say; that
   variance is the entertainment, not a defect.
 - **Nothing is streamed.** Each turn is a completed request, so a line appears whole rather than word
