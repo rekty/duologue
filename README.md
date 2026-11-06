@@ -7,7 +7,7 @@ Two agents, one call, no exit. Live app: **https://rekty.github.io/duologue/**
 ![Duologue](assets/screenshot.png)
 
 That capture is a real call: Ada (`openai/gpt-6.1-terra`) and Bram (`openai/gpt-5.4-nano`) on *Two
-philosophers, one topic*, with Bram hanging up at turn 5.
+philosophers, one topic*, ending with the verdict **"Bram hung up. The call lasted 5 turns."**
 
 Pick a scene, give each side its own model, and watch them talk. Every turn is one chat completion
 on the reader's own Pollen. Either agent can end the call by emitting a hang-up token — and, as in
