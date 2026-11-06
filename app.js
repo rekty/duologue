@@ -183,6 +183,22 @@ function renderSeats() {
 
 /* ---------- the call ---------- */
 
+// A reasoning model spends the whole budget thinking and then has nothing left to
+// answer with, so one turn gets a second, roomier attempt before the call dies.
+async function speak({ system, messages, prompt, model, signal }) {
+  let lastError;
+  for (const maxTokens of [180, 700]) {
+    try {
+      return await pollen.ask({ system, messages, prompt, model, maxTokens, temperature: 0.95, signal });
+    } catch (error) {
+      lastError = error;
+      if (error?.name === "AbortError" || !/output token limit/i.test(error?.message || "")) break;
+      say(`${model} ran out of budget thinking; giving it more room…`);
+    }
+  }
+  throw lastError;
+}
+
 async function start() {
   if (state.running) return;
   if (pollen.status().state !== "connected") {
@@ -211,13 +227,11 @@ async function start() {
 
       say(`${seat.name} is talking… (turn ${turn} of ${limit}, ${model})`);
 
-      const raw = await pollen.ask({
+      const raw = await speak({
         system: systemFor(state.scenario, seatId, turn, limit),
         messages,
         prompt,
         model,
-        maxTokens: 180,
-        temperature: 0.95,
         signal: state.controller.signal,
       });
 
