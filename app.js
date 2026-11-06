@@ -286,8 +286,12 @@ async function pollDevice() {
   if (result.state === "pending") return;
   state.device = null;
   clearInterval(state.timer);
-  if (result.state === "error") $("auth-note").textContent = `Sign-in failed: ${result.message}`;
+  $("auth-code").textContent = "";
+  $("auth-open").removeAttribute("href");
   renderAuth();
+  // renderAuth rewrites the note, so the reason has to be set after it or it is lost.
+  if (result.state === "error") $("auth-note").textContent = `Sign-in failed: ${result.message}`;
+  if (result.state === "expired") $("auth-note").textContent = "That code expired. Connect again for a fresh one.";
 }
 
 $("auth-connect").onclick = async () => {
@@ -295,7 +299,8 @@ $("auth-connect").onclick = async () => {
   try {
     state.device = await pollen.connect();
     $("auth-code").textContent = state.device.userCode;
-    $("auth-open").onclick = () => window.open(state.device.verify, "_blank", "noopener");
+    // A real link, because window.open from a script-triggered click is popup-blocked.
+    $("auth-open").href = state.device.verify;
     state.timer = setInterval(pollDevice, Math.max(state.device.interval || 5000, 3000));
     renderAuth();
   } catch (error) {
